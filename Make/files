@@ -1,0 +1,4 @@
+velGrad/velGrad.C
+turbStatistics/turbStatistics.C
+
+LIB = $(FOAM_USER_LIBBIN)/libuserFunctionObjects
