@@ -5,14 +5,14 @@
 #include "volMesh.H"
 #include "volFieldsFwd.H"
 #include "autoPtr.H"
-#include "OutputFilterFunctionObject.H"
+//#include "OutputFilterFunctionObject.H"
 #include "dimensionedTypes.H"
 #include "Time.H"
+#include "fvMeshFunctionObject.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
 {
-
 // Forward declaration of classes
 class objectRegistry;
 class dictionary;
@@ -21,6 +21,7 @@ class mapPolyMesh;
 class polyMesh;
 class fvMesh;
 
+namespace functionObjects {
 /*---------------------------------------------------------------------------*\
                          Class velGrad Declaration
 \*---------------------------------------------------------------------------*/
@@ -28,7 +29,7 @@ class fvMesh;
 extern const dimensionSet dimStat;
 extern const dimensionSet dimIncPressure;
 
-class turbStatistics
+class turbStatistics : public fvMeshFunctionObject
 {
 protected:
 
@@ -42,11 +43,10 @@ protected:
 
         label timeStep_;
 
-        const fvMesh& mesh_;
-
         dimensionedScalar nu_;
 
         scalar rhoRef_;
+        word rhoFieldName;
         //---------------------------------------------------
         // u - velocity field
         // p - pressure field
@@ -121,6 +121,9 @@ protected:
         static volVectorField& newVectorField(const word &name, const fvMesh& mesh, dimensionSet dim, IOobject::readOption read=IOobject::NO_READ, IOobject::writeOption write=IOobject::NO_WRITE);
         static volTensorField& newTensorField(const word &name, const fvMesh& mesh, dimensionSet dim, IOobject::readOption read=IOobject::NO_READ, IOobject::writeOption write=IOobject::NO_WRITE);
 
+
+        const scalarField& density() const;
+
 public:
 
     //- Runtime type information
@@ -131,13 +134,12 @@ public:
 
         //- Construct for given objectRegistry and dictionary.
         //  Allow the possibility to load fields from files
-        turbStatistics
-        (
-            const word& name,
-            const objectRegistry& unused,
-            const dictionary&,
-            const bool loadFromFilesUnused = false
-        );
+    turbStatistics
+    (
+        const word& name,
+        const Time& time,
+        const dictionary& dict
+    );
 
 
     //- Destructor
@@ -152,27 +154,27 @@ public:
         }
 
         //- Read the system calls
-        virtual void read(const dictionary&);
+        virtual bool read(const dictionary&);
 
         //- Execute the "executeCalls" at each time-step
-        virtual void execute();
+        virtual bool execute();
 
         //- Execute the "endCalls" at the final time-loop
-        virtual void end();
+//        virtual void end() {}
 
         //- Called when time was set at the end of the Time::operator++
-        virtual void timeSet();
+//        virtual void timeSet() {}
 
         //- Write, execute the "writeCalls"
-        virtual void write();
+        virtual bool write();
 
-        //- Update for changes of mesh
-        virtual void updateMesh(const mapPolyMesh&)
-        {}
+//        //- Update for changes of mesh
+//        virtual void updateMesh(const mapPolyMesh&)
+//        {}
 
-        //- Update for changes of mesh
-        virtual void movePoints(const polyMesh&)
-        {}
+//        //- Update for changes of mesh
+//        virtual void movePoints(const polyMesh&)
+//        {}
 
 };
 
@@ -186,11 +188,15 @@ scalar turbStatistics::newFrac() const
     return 1./timeStep_;
 }
 
-typedef OutputFilterFunctionObject<turbStatistics> turbStatisticsFunctionObject;
+//typedef OutputFilterFunctionObject<turbStatistics> turbStatisticsFunctionObject;
 
 
 
 
+
+
+
+} // End namespace functionObjects
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

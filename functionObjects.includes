@@ -1,2 +1,10 @@
 turbStatistics
 velGrad
+
+
+
+/home/wgryglas/Code/Cpp/OpenFOAM/OpenFOAM-v1706/src/OpenFOAM/lnInclude
+/home/wgryglas/Code/Cpp/OpenFOAM/OpenFOAM-v1706/src/finiteVolume/lnInclude
+/home/wgryglas/Code/Cpp/OpenFOAM/OpenFOAM-v1706/src/meshTools/lnInclude
+/home/wgryglas/Code/Cpp/OpenFOAM/OpenFOAM-v1706/src/fvOptions/lnInclude
+/home/wgryglas/Code/Cpp/OpenFOAM/OpenFOAM-v1706/src/sampling/lnInclude
