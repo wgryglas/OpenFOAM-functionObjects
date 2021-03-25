@@ -56,12 +56,17 @@ protected:
 
         // - mean u
         volVectorField& meanU_;
-        // - u fluctuation
-        volVectorField& up_;
+        // - mean u fluctuation
+        volVectorField& meanUp_;
+        // - mean voritcity
+        volVectorField& meanVorticity_;
+
         // - mean p
         volScalarField& meanP_;
+
         // - p fluctuation
-        volScalarField& pp_;
+//        volScalarField& pp_;
+
         // - meanUU - real velocity multiplication
         volTensorField& meanUU_;
         // - reynolds stress tensor: mean(up_i*up_j)
@@ -106,7 +111,7 @@ protected:
         inline scalar newFrac() const;
 
 
-        void updateMeanAndFluctFields();
+        void updateMeanFields();
         void updateStressTensor();
         void updateKineticEnergy();
         void updateConvectionStatistics();

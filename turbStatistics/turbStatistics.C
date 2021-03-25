@@ -113,11 +113,12 @@ namespace functionObjects {
         nu_("viscosity",dimViscosity,1),
         rhoRef_(1.0),
         meanU_( newVectorField("meanU", mesh_, dimVelocity, IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE) ),
-        up_( newVectorField("Up", mesh_, dimVelocity)  ),
+        meanUp_( newVectorField("meanUp", mesh_, dimVelocity, IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE)  ),
+        meanVorticity_( newVectorField("meanVorticity", mesh_, dimless/dimTime, IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE) ),
         meanP_( newScalarField("meanP", mesh_, findPressureDim(mesh_), IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE) ),
-        pp_( newScalarField("pp", mesh_, findPressureDim(mesh_)) ),
+//        pp_( newScalarField("pp", mesh_, findPressureDim(mesh_)) ),
         meanUU_( newTensorField("meanUU", mesh_, dimVelocity*dimVelocity, IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE) ),
-        tau_( newTensorField("tau", mesh_, dimIncPressure) ),
+        tau_( newTensorField("tau", mesh_, dimIncPressure, IOobject::READ_IF_PRESENT, IOobject::AUTO_WRITE) ),
         k_( newScalarField("turbKinEnergy", mesh_, dimVelocity*dimVelocity, IOobject::NO_READ, IOobject::AUTO_WRITE) ),
         convK_( newScalarField("convK", mesh_, dimStat) ),
         prodK_( newScalarField("prodK", mesh_, dimStat) ),
@@ -173,7 +174,7 @@ namespace functionObjects {
 
         statisticTime_.add("statisticTimeStep",timeStep_,true);
 
-        updateMeanAndFluctFields();
+        updateMeanFields();
         updateStressTensor();
         updateKineticEnergy();
         updateConvectionStatistics();
@@ -192,19 +193,35 @@ namespace functionObjects {
 
 
     // * * * * * * * * * * * * * * * Internal Fields Handling  * * * * * * * * * //
-
-    void turbStatistics::updateMeanAndFluctFields() {
-        const volVectorField & U = obr_.lookupObject<volVectorField>("U");
+    /*
+     *          alfa = 1.0;
+     *          Ux = C_U(c,t)*cos(3.1415926/180.0*alfa) - C_V(c,t)*sin(3.1415926/180.0*alfa);
+     *          Uy = C_U(c,t)*sin(3.1415926/180.0*alfa) + C_V(c,t)*cos(3.1415926/180.0*alfa);
+     *          Uz = C_W(c,t);
+     *          C_UDMI(c,t,2) += SQR( Ux );
+     *          C_UDMI(c,t,3) = (C_UDMI(c,t,3)*(rn-1) + Ux)/rn;
+     * Avg vel: phi_avg = C_UDMI(c,t,3);
+     * up*up:   C_UDMI(c,t,4) = C_UDMI(c,t,2)/rn - phi_avg*phi_avg;
+     */
+    void turbStatistics::updateMeanFields() {
+        const volVectorField & Uoriginal = obr_.lookupObject<volVectorField>("U");
         const volScalarField & p = obr_.lookupObject<volScalarField>("p");
+
+        scalar angleDeg = 0;
+        scalar angleRad = Foam::constant::mathematical::pi / 180 * angleDeg;
+        volVectorField U(Uoriginal);
+        if(mag(angleDeg) > VSMALL) {
+            U.replace(vector::X, Uoriginal.component(vector::X)*cos(angleRad) - Uoriginal.component(vector::Y)*sin(angleRad) );
+            U.replace(vector::Y, Uoriginal.component(vector::X)*sin(angleRad) + Uoriginal.component(vector::Y)*sin(angleRad) );
+        }
 
         meanU_ = meanU_*oldFrac() + U*newFrac();
         meanP_ = meanP_*oldFrac() + p*newFrac();
+        meanUU_= meanUU_*oldFrac() + ( U*U )*newFrac();
 
-        up_ = U - meanU_;
-        pp_ = p - meanP_;
-
-        meanUU_= meanUU_*oldFrac() + ( U*U )*newFrac() ;
+        meanVorticity_ = meanVorticity_*oldFrac() + fvc::curl(U);
     }
+
 
     void turbStatistics::updateStressTensor() {
         tau_ = -(meanUU_ - meanU_*meanU_);
@@ -213,11 +230,15 @@ namespace functionObjects {
 //        else {
 //            tau_ = - density() * (meanUU_ - meanU_*meanU_);
 //        }
+        meanUp_.replace(vector::X, sqrt(-tau_.component(tensor::XX)));
+        meanUp_.replace(vector::Y, sqrt(-tau_.component(tensor::YY)));
+        meanUp_.replace(vector::Z, sqrt(-tau_.component(tensor::ZZ)));
     }
 
     void turbStatistics::updateKineticEnergy() {
-         k_ =  - 0.5 * tr(tau_);
+        k_ = - 0.5 * tr(tau_);
     }
+
 
     void turbStatistics::updateConvectionStatistics() {
         //convK_ = fvc::div(linearInterpolate(meanU_) & mesh.Sf(), k_,"div(phi,k)");
